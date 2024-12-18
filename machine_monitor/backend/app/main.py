@@ -89,14 +89,55 @@ class MachineMonitor:
             self.machines[machine_id] = []
     
     def generate_machine_data(self, machine_id: str) -> MachineData:
-        """Generate mock machine data with some realistic constraints."""
+        """Generate mock machine data with more realistic and varied constraints."""
+        # Machine-specific baseline and variation
+        machine_baselines = {
+            'machine-0': {  # Server
+                'temp_base': 50, 'temp_var': 15,
+                'cpu_base': 40, 'cpu_var': 30,
+                'mem_base': 60, 'mem_var': 20
+            },
+            'machine-1': {  # High-performance workstation
+                'temp_base': 65, 'temp_var': 10,
+                'cpu_base': 70, 'cpu_var': 25,
+                'mem_base': 75, 'mem_var': 15
+            },
+            'machine-2': {  # Edge device
+                'temp_base': 40, 'temp_var': 5,
+                'cpu_base': 20, 'cpu_var': 15,
+                'mem_base': 40, 'mem_var': 10
+            }
+        }
+
+        # Get machine-specific baseline
+        baseline = machine_baselines.get(machine_id, {
+            'temp_base': 50, 'temp_var': 15,
+            'cpu_base': 50, 'cpu_var': 25,
+            'mem_base': 50, 'mem_var': 20
+        })
+
+        # Introduce more realistic randomness with machine-specific variations
         data = MachineData(
             machine_id=machine_id,
-            temperature=round(random.uniform(30, 90), 2),  # Realistic machine temp
-            cpu_usage=round(random.uniform(0, 100), 2),
-            memory_usage=round(random.uniform(0, 100), 2),
+            temperature=round(
+                baseline['temp_base'] + random.uniform(-baseline['temp_var'], baseline['temp_var']), 
+                2
+            ),
+            cpu_usage=round(
+                baseline['cpu_base'] + random.uniform(-baseline['cpu_var'], baseline['cpu_var']), 
+                2
+            ),
+            memory_usage=round(
+                baseline['mem_base'] + random.uniform(-baseline['mem_var'], baseline['mem_var']), 
+                2
+            ),
             timestamp=datetime.now()
         )
+        
+        # Clamp values to realistic ranges
+        data.temperature = max(30, min(data.temperature, 95))
+        data.cpu_usage = max(0, min(data.cpu_usage, 100))
+        data.memory_usage = max(0, min(data.memory_usage, 100))
         
         # Update Prometheus metrics
         MACHINE_TEMPERATURE.labels(machine_id=machine_id).set(data.temperature)
