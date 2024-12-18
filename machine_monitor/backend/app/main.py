@@ -1,11 +1,11 @@
 import asyncio
 import random
 import socket
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import prometheus_client
 from prometheus_client import Counter, Gauge
 import logging
@@ -37,6 +37,45 @@ class MachineData(BaseModel):
     cpu_usage: float
     memory_usage: float
     timestamp: datetime
+    human_timestamp: str = Field(default_factory=lambda: datetime.now().strftime("%Y-%m-%d %I:%M:%S %p"))
+    
+    def format_timestamp(self, relative: bool = False) -> str:
+        """
+        Generate a human-friendly timestamp
+        
+        :param relative: If True, return relative time (e.g., '2 hours ago')
+        :return: Formatted timestamp string
+        """
+        now = datetime.now()
+        
+        if relative:
+            diff = now - self.timestamp
+            
+            # Less than a minute ago
+            if diff < timedelta(minutes=1):
+                return "just now"
+            
+            # Less than an hour ago
+            if diff < timedelta(hours=1):
+                minutes = int(diff.total_seconds() / 60)
+                return f"{minutes} minute{'s' if minutes > 1 else ''} ago"
+            
+            # Less than a day ago
+            if diff < timedelta(days=1):
+                hours = int(diff.total_seconds() / 3600)
+                return f"{hours} hour{'s' if hours > 1 else ''} ago"
+            
+            # More than a day ago
+            days = int(diff.total_seconds() / (24 * 3600))
+            return f"{days} day{'s' if days > 1 else ''} ago"
+        
+        # Default absolute timestamp
+        return self.timestamp.strftime("%Y-%m-%d %I:%M:%S %p")
+
+    class Config:
+        json_encoders = {
+            datetime: lambda dt: dt.isoformat()
+        }
 
 class MachineMonitor:
     def __init__(self):
@@ -348,7 +387,7 @@ async def websocket_machine_metrics(websocket: WebSocket, machine_id: str):
                     machine_data = machine_monitor.machines[machine_id]
                 
                 latest_data = machine_data[-1]
-                await websocket.send_json(latest_data.model_dump())
+                await websocket.send_json(latest_data.dict())
             
             # Wait before next update
             await asyncio.sleep(settings.METRICS_UPDATE_INTERVAL)

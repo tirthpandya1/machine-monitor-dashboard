@@ -23,6 +23,33 @@ import {
   ResponsiveContainer 
 } from 'recharts';
 
+const formatTimestamp = (timestamp) => {
+  const now = new Date();
+  const dataTime = new Date(timestamp);
+  const diff = now - dataTime;
+
+  // Less than a minute ago
+  if (diff < 60000) {
+    return 'just now';
+  }
+
+  // Less than an hour ago
+  if (diff < 3600000) {
+    const minutes = Math.floor(diff / 60000);
+    return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+  }
+
+  // Less than a day ago
+  if (diff < 86400000) {
+    const hours = Math.floor(diff / 3600000);
+    return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+  }
+
+  // More than a day ago
+  const days = Math.floor(diff / 86400000);
+  return `${days} day${days > 1 ? 's' : ''} ago`;
+};
+
 const MachineCard = ({ machineId, machineData, analysis }) => {
   // Determine overall machine health
   const getHealthStatus = () => {
@@ -76,6 +103,7 @@ const MachineCard = ({ machineId, machineData, analysis }) => {
               <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
               <XAxis 
                 dataKey="timestamp" 
+                tickFormatter={formatTimestamp}
                 tick={{ fill: '#666' }} 
                 axisLine={{ stroke: '#666' }}
               />
